@@ -46,11 +46,19 @@ public class GameControl : MonoBehaviour
 		hideAllScreens();
 		ed_creditsScreen.SetActive(true);
 	}
+
+	// load the multiplayer test map
+	public void loadMultiplayer()
+	{
+		Application.LoadLevelAdditive("cart_test_01");
+		hideAllScreens();
+	}
 	
 	public void onStartClicked()
 	{
 		//TODO: get value from selection thing in menu
-		Application.LoadLevelAdditive( "level_01");
+		Application.LoadLevelAdditive("level_01");
+		levelLoaded = true;
 		hideAllScreens();
 	}
 
