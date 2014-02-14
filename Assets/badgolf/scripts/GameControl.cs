@@ -50,7 +50,7 @@ public class GameControl : MonoBehaviour
 	// load the multiplayer test map
 	public void loadMultiplayer()
 	{
-		Application.LoadLevelAdditive("cart_test_01");
+		Application.LoadLevelAdditive("multi_lobby");
 		hideAllScreens();
 	}
 	

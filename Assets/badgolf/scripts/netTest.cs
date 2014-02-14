@@ -39,7 +39,7 @@ public class netTest : MonoBehaviour {
 				clone.networkView.viewID = viewID;
 				clone.rigidbody.useGravity = true;
 				movement nms = clone.AddComponent("movement") as movement;
-				nms.cameraGameObject = myCamera;
+				//nms.cameraGameObject = myCamera;
 
 				// add it to the list
 				playerGameObjects.Add(clone);
