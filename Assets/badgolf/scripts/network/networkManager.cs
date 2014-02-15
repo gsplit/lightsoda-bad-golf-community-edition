@@ -14,7 +14,7 @@ public class networkManager : MonoBehaviour {
 		MasterServer.port = 23466;
 		// get them servers
 		MasterServer.ClearHostList();
-		MasterServer.RequestHostList("HL3");
+		MasterServer.RequestHostList("HL4");
 	}
 	
 	void OnGUI() {
@@ -33,7 +33,7 @@ public class networkManager : MonoBehaviour {
 			{
 				// get them servers
 				MasterServer.ClearHostList();
-				MasterServer.RequestHostList("HL3");
+				MasterServer.RequestHostList("HL4");
 			}
 			
 			HostData[] data = MasterServer.PollHostList();

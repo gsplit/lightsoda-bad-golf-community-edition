@@ -6,44 +6,31 @@ public class networkManagerServer : MonoBehaviour {
 	ArrayList playerGameObjects = new ArrayList();
 	Dictionary<float,string> screenMessages = new Dictionary<float,string>();
 	public GameObject myCart;
+	Dictionary<NetworkPlayer,NetworkViewID> playersCartViewID = new Dictionary<NetworkPlayer,NetworkViewID>();
+	List<NetworkViewID> randomBalls = new List<NetworkViewID>();
 
 	// Use this for initialization
 	void Start () {
 		// Use NAT punchthrough if no public IP present
-		Network.InitializeServer(8, 11177, !Network.HavePublicAddress());
-		MasterServer.RegisterHost("HL3", SystemInfo.deviceName, "Test server");
+		Network.InitializeServer(32, 11177, !Network.HavePublicAddress());
+		MasterServer.RegisterHost("HL4", SystemInfo.deviceName, "Test server");
 		
 		// create server owners buggy
 		myCart = Instantiate(Resources.Load("buggy1"), new Vector3(0,5,0), Quaternion.identity) as GameObject;
 		// networkview that shit
 		NetworkViewID viewID = Network.AllocateViewID();
 		myCart.networkView.viewID = viewID;
-		// controls for the server to move their own buggy
-		//myCart.AddComponent("movement");
 		
 		// add it to the list
 		playerGameObjects.Add(myCart);
 
 		// ANY SERVER SIDE SCRIPTS GO HERE
 		//********************************************
-		// receives player input and handles fiziks
+		// receives all players inputs and handles fiziks
 		controlServer ms = gameObject.AddComponent("controlServer") as controlServer;
-		// controls for the server to move their own buggy
-		controlClient mc = gameObject.AddComponent("controlClient") as controlClient;
-		mc.myViewID = viewID;
-		mc.ms = ms;
+		ms.myCart = myCart;
+		ms.myViewID = viewID;
 		//********************************************
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		/*/ debug spawn thing
-		if (GUILayout.Button ("Spawn something"))
-		{
-			NetworkViewID viewID = Network.AllocateViewID();
-			networkView.RPC("NewGuyJoined", RPCMode.AllBuffered, viewID, new Vector3(0,5,0));
-		}
-		//*/
 	}
 
 	// fired when a player joins (if you couldn't tell)
@@ -55,11 +42,22 @@ public class networkManagerServer : MonoBehaviour {
 		{
 			networkView.RPC("SpawnPrefab", player, playerGameObject.networkView.viewID, playerGameObject.transform.position, new Vector3(0,0,0), "buggy1");
 		}
+		// send all balls
+		foreach (NetworkViewID randomBallViewID in randomBalls)
+		{
+			GameObject randomBall = NetworkView.Find(randomBallViewID).gameObject;
+			networkView.RPC("SpawnPrefab", player, randomBallViewID, randomBall.transform.position, randomBall.rigidbody.velocity, "ball");
+		}
 	}
 	void OnPlayerDisconnected(NetworkPlayer player) {
 		// remove all their stuff
 		Network.RemoveRPCs(player);
 		Network.DestroyPlayerObjects(player);
+		// remove their buggy
+		playerGameObjects.Remove(NetworkView.Find(playersCartViewID[player]).gameObject);
+		Destroy(NetworkView.Find(playersCartViewID[player]).gameObject);
+		// tell everyone else to aswell
+		networkView.RPC("RemoveViewID", RPCMode.All, playersCartViewID[player]);
 	}
 	
 	void OnGUI() {
@@ -88,19 +86,24 @@ public class networkManagerServer : MonoBehaviour {
 		screenMessages.Add(Time.time+5,text);
 	}
 	
-	// spawns a prefab
+	// spawns a golf ball
 	[RPC]
-	void SpawnPrefab(NetworkViewID IGNORED, Vector3 spawnLocation, Vector3 velocity, string prefabName) {
-		Object prefab = Resources.Load(prefabName);
+	void SpawnBall(NetworkViewID playerViewID, NetworkMessageInfo info) {
+		// get the players location
+		GameObject playerGameObject = NetworkView.Find(playerViewID).gameObject;
+		Vector3 position = playerGameObject.transform.position + playerGameObject.transform.rotation * Vector3.forward * 3 + Vector3.up;
+		Vector3 velocity = playerGameObject.rigidbody.velocity + playerGameObject.transform.rotation * Vector3.forward * 10;
 		// instantiate the prefab
-		GameObject clone = Instantiate(prefab, spawnLocation, Quaternion.identity) as GameObject;
+		GameObject clone = Instantiate(Resources.Load("ball"), position, Quaternion.identity) as GameObject;
 		// create and set viewID
 		NetworkViewID viewID = Network.AllocateViewID();
 		clone.networkView.viewID = viewID;
-		// set velocity if we can
-		if (clone.transform) clone.rigidbody.velocity = velocity;
+		// give it velocity
+		clone.rigidbody.velocity = velocity;
 		// tell everyone else about it
-		networkView.RPC("SpawnPrefab", RPCMode.OthersBuffered, viewID, spawnLocation, velocity, prefabName);
+		networkView.RPC("SpawnPrefab", RPCMode.Others, viewID, position, velocity, "ball");
+		// add it to the list
+		randomBalls.Add(viewID);
 	}
 
 	[RPC]
@@ -114,13 +117,22 @@ public class networkManagerServer : MonoBehaviour {
 		NetworkViewID viewID = Network.AllocateViewID();
 		clone.networkView.viewID = viewID;
 		// tell everyone else about it
-		networkView.RPC("SpawnPrefab", RPCMode.OthersBuffered, viewID, spawnLocation, velocity, "buggy1");
+		networkView.RPC("SpawnPrefab", RPCMode.Others, viewID, spawnLocation, velocity, "buggy1");
 		// tell the player it's theirs
 		networkView.RPC("ThisOnesYours", info.sender, viewID);
+		// add it to the lists
+		playersCartViewID.Add(info.sender, viewID);
+		playerGameObjects.Add(clone);
 	}
 
 	
 	// blank for client use only
 	[RPC]
 	void ThisOnesYours(NetworkViewID viewID) {}
+
+	[RPC]
+	void SpawnPrefab(NetworkViewID viewID, Vector3 spawnLocation, Vector3 velocity, string prefabName) {}
+
+	[RPC]
+	void RemoveViewID(NetworkViewID viewID) {}
 }

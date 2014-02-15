@@ -12,7 +12,8 @@ public class networkManagerClient : MonoBehaviour {
 		// spawn in a cart
 		networkView.RPC("GiveMeACart", RPCMode.Server);
 	}
-
+	
+	// CLIENT SIDE SCRIPTS GO HERE
 	void AddScripts() {
 		// updates network-sunk fiziks
 		controlClient mc = gameObject.AddComponent("controlClient") as controlClient;
@@ -20,8 +21,13 @@ public class networkManagerClient : MonoBehaviour {
 	}
 	
 	void OnGUI() {
-		float keyToRemove = 0;
+		// ping list
+		GUILayout.BeginHorizontal();
+		GUILayout.Label("Ping: " + Network.GetAveragePing(myViewID.owner) + "ms");
+		GUILayout.EndHorizontal();
+		
 		// show any debug messages
+		float keyToRemove = 0;
 		foreach (KeyValuePair<float,string> msgs in screenMessages) {
 			if (msgs.Key < Time.time) {
 				keyToRemove = msgs.Key;	// don't worry about there being more than 1 - it'll update next frame
@@ -54,7 +60,7 @@ public class networkManagerClient : MonoBehaviour {
 		// set viewID
 		clone.networkView.viewID = viewID;
 		// set velocity if we can
-		if (clone.transform) clone.rigidbody.velocity = velocity;
+		if (clone.rigidbody) clone.rigidbody.velocity = velocity;
 	}
 
 	// tells the player that this viewID is theirs
@@ -63,6 +69,13 @@ public class networkManagerClient : MonoBehaviour {
 		myViewID = viewID;
 		myCart = NetworkView.Find(viewID).gameObject;
 		AddScripts();
+	}
+	
+	// remove stuff
+	[RPC]
+	void RemoveViewID(NetworkViewID viewID) {
+		// remove the object
+		Destroy(NetworkView.Find(viewID).gameObject);
 	}
 
 
